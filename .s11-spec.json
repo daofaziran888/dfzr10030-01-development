@@ -1,0 +1,648 @@
+{
+  "domain": "数据工程",
+  "subdirection": "数据采集、爬虫与RPA",
+  "app_name": "多源数据采集与RPA自动化平台",
+  "app_slug": "data-collection-rpa",
+  "app_desc": "面向网页抓取、API接入、增量采集、RPA流程编排、数据校验与采集监控的数据工程平台。",
+  "frontend": "vue",
+  "backend": "python",
+  "port_frontend": 5173,
+  "port_backend": 8000,
+  "modules": [
+    {
+      "key": "datasource",
+      "name": "数据源配置",
+      "entity": "数据源",
+      "page_shape": "crud-table",
+      "fields": [
+        "源端编号",
+        "连接类型",
+        "接入地址",
+        "认证方式",
+        "采样周期",
+        "超时秒数",
+        "重试上限",
+        "负责人"
+      ],
+      "statuses": [
+        "草稿",
+        "待校验",
+        "已启用",
+        "已停用"
+      ],
+      "actions": [
+        "提交校验",
+        "启用配置",
+        "停用配置"
+      ],
+      "action_targets": [
+        "待校验",
+        "已启用",
+        "已停用"
+      ],
+      "metrics": [
+        "数据源总数",
+        "已启用数据源",
+        "待校验数据源"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "crawler",
+      "name": "网页采集规则",
+      "entity": "采集规则",
+      "page_shape": "crud-table",
+      "fields": [
+        "规则编号",
+        "目标网址",
+        "页面选择器",
+        "正文选择器",
+        "翻页参数",
+        "抓取频率",
+        "字符编码",
+        "去重策略"
+      ],
+      "statuses": [
+        "草稿",
+        "测试中",
+        "已发布",
+        "已停用"
+      ],
+      "actions": [
+        "提交测试",
+        "发布规则",
+        "停用规则"
+      ],
+      "action_targets": [
+        "测试中",
+        "已发布",
+        "已停用"
+      ],
+      "metrics": [
+        "规则总数",
+        "已发布规则",
+        "测试中规则"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "apiclient",
+      "name": "API接入管理",
+      "entity": "API客户端",
+      "page_shape": "crud-table",
+      "fields": [
+        "客户端编号",
+        "接口名称",
+        "请求方法",
+        "认证凭证",
+        "限流令牌",
+        "重试策略",
+        "超时配置",
+        "启用状态"
+      ],
+      "statuses": [
+        "待配置",
+        "已配置",
+        "运行中",
+        "已停用"
+      ],
+      "actions": [
+        "完成配置",
+        "启动接入",
+        "停用接入"
+      ],
+      "action_targets": [
+        "已配置",
+        "运行中",
+        "已停用"
+      ],
+      "metrics": [
+        "接入总数",
+        "运行中客户端",
+        "待配置客户端"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "incremental",
+      "name": "增量采集",
+      "entity": "增量游标",
+      "page_shape": "job-timeline",
+      "fields": [
+        "游标编号",
+        "来源标识",
+        "增量字段",
+        "当前水位",
+        "批次大小",
+        "采集间隔",
+        "上次采集",
+        "下次采集"
+      ],
+      "statuses": [
+        "待启动",
+        "运行中",
+        "已完成",
+        "失败"
+      ],
+      "actions": [
+        "启动采集",
+        "暂停采集",
+        "标记失败"
+      ],
+      "action_targets": [
+        "运行中",
+        "待启动",
+        "失败"
+      ],
+      "metrics": [
+        "运行中游标",
+        "失败游标",
+        "待启动游标"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "robot_task",
+      "name": "RPA任务编排",
+      "entity": "RPA任务",
+      "page_shape": "job-timeline",
+      "fields": [
+        "任务编号",
+        "任务名称",
+        "页面定位器",
+        "动作序列",
+        "等待条件",
+        "结果字段",
+        "超时秒数",
+        "执行批次"
+      ],
+      "statuses": [
+        "待执行",
+        "执行中",
+        "已完成",
+        "执行失败"
+      ],
+      "actions": [
+        "开始执行",
+        "暂停任务",
+        "标记失败"
+      ],
+      "action_targets": [
+        "执行中",
+        "待执行",
+        "执行失败"
+      ],
+      "metrics": [
+        "待执行任务",
+        "执行中任务",
+        "失败任务"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "ingestion",
+      "name": "数据接入通道",
+      "entity": "接入通道",
+      "page_shape": "job-timeline",
+      "fields": [
+        "通道编号",
+        "通道名称",
+        "输入格式",
+        "解析引擎",
+        "并发数量",
+        "背压阈值",
+        "缓冲队列",
+        "通道状态"
+      ],
+      "statuses": [
+        "待开通",
+        "开通中",
+        "运行中",
+        "已关闭"
+      ],
+      "actions": [
+        "开通通道",
+        "暂停通道",
+        "关闭通道"
+      ],
+      "action_targets": [
+        "开通中",
+        "运行中",
+        "已关闭"
+      ],
+      "metrics": [
+        "运行中通道",
+        "待开通通道",
+        "已关闭通道"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "parser",
+      "name": "格式解析器",
+      "entity": "解析配置",
+      "page_shape": "crud-table",
+      "fields": [
+        "解析编号",
+        "输入格式",
+        "输出格式",
+        "字段映射",
+        "类型转换",
+        "空值处理",
+        "异常策略",
+        "解析状态"
+      ],
+      "statuses": [
+        "草稿",
+        "已配置",
+        "生效中",
+        "已废弃"
+      ],
+      "actions": [
+        "提交配置",
+        "启用解析",
+        "废弃解析"
+      ],
+      "action_targets": [
+        "已配置",
+        "生效中",
+        "已废弃"
+      ],
+      "metrics": [
+        "解析器总数",
+        "生效中解析器",
+        "已废弃解析器"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "validator",
+      "name": "采集结果校验",
+      "entity": "校验规则",
+      "page_shape": "crud-table",
+      "fields": [
+        "规则编号",
+        "校验字段",
+        "校验类型",
+        "期望值",
+        "容错范围",
+        "采样比例",
+        "阻断级别",
+        "规则状态"
+      ],
+      "statuses": [
+        "草稿",
+        "待测试",
+        "已启用",
+        "已停用"
+      ],
+      "actions": [
+        "提交测试",
+        "启用规则",
+        "停用规则"
+      ],
+      "action_targets": [
+        "待测试",
+        "已启用",
+        "已停用"
+      ],
+      "metrics": [
+        "规则总数",
+        "已启用规则",
+        "待测试规则"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "dedup",
+      "name": "采集去重",
+      "entity": "去重策略",
+      "page_shape": "crud-table",
+      "fields": [
+        "策略编号",
+        "输入来源",
+        "去重键",
+        "排序字段",
+        "保留策略",
+        "时间窗口",
+        "重复阈值",
+        "策略状态"
+      ],
+      "statuses": [
+        "草稿",
+        "已配置",
+        "生效中",
+        "已停用"
+      ],
+      "actions": [
+        "提交配置",
+        "启用策略",
+        "停用策略"
+      ],
+      "action_targets": [
+        "已配置",
+        "生效中",
+        "已停用"
+      ],
+      "metrics": [
+        "策略总数",
+        "生效中策略",
+        "待配置策略"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "schedule",
+      "name": "采集调度",
+      "entity": "调度计划",
+      "page_shape": "crud-table",
+      "fields": [
+        "计划编号",
+        "关联任务",
+        "调度周期",
+        "开始时间",
+        "结束时间",
+        "依赖任务",
+        "失败策略",
+        "计划状态"
+      ],
+      "statuses": [
+        "草稿",
+        "已排期",
+        "运行中",
+        "已完成",
+        "已暂停"
+      ],
+      "actions": [
+        "确认排期",
+        "启动调度",
+        "暂停调度"
+      ],
+      "action_targets": [
+        "已排期",
+        "运行中",
+        "已暂停"
+      ],
+      "metrics": [
+        "运行中计划",
+        "已排期计划",
+        "待排期计划"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "monitor",
+      "name": "采集监控",
+      "entity": "监控面板",
+      "page_shape": "analysis-dashboard",
+      "fields": [
+        "面板编号",
+        "采集源总数",
+        "今日采集量",
+        "成功率",
+        "平均延迟",
+        "失败重试",
+        "异常告警",
+        "更新时间"
+      ],
+      "statuses": [
+        "正常",
+        "预警",
+        "告警"
+      ],
+      "actions": [
+        "查看详情"
+      ],
+      "action_targets": [
+        "正常"
+      ],
+      "metrics": [
+        "今日采集量",
+        "成功率",
+        "异常告警数"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "log_viewer",
+      "name": "采集日志",
+      "entity": "日志条目",
+      "page_shape": "crud-table",
+      "fields": [
+        "日志编号",
+        "关联任务",
+        "日志级别",
+        "记录时间",
+        "日志内容",
+        "错误堆栈",
+        "处理状态",
+        "处理人"
+      ],
+      "statuses": [
+        "未处理",
+        "处理中",
+        "已处理",
+        "已忽略"
+      ],
+      "actions": [
+        "开始处理",
+        "标记已处理",
+        "忽略日志"
+      ],
+      "action_targets": [
+        "处理中",
+        "已处理",
+        "已忽略"
+      ],
+      "metrics": [
+        "未处理日志",
+        "处理中日志",
+        "已处理日志"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "auth",
+      "name": "凭证管理",
+      "entity": "认证凭证",
+      "page_shape": "crud-table",
+      "fields": [
+        "凭证编号",
+        "凭证类型",
+        "关联数据源",
+        "凭证内容",
+        "有效期至",
+        "创建时间",
+        "最后使用",
+        "凭证状态"
+      ],
+      "statuses": [
+        "有效",
+        "即将过期",
+        "已过期",
+        "已吊销"
+      ],
+      "actions": [
+        "续期凭证",
+        "吊销凭证"
+      ],
+      "action_targets": [
+        "有效",
+        "已吊销"
+      ],
+      "metrics": [
+        "有效凭证",
+        "即将过期凭证",
+        "已过期凭证"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "transform",
+      "name": "采集转换管道",
+      "entity": "转换节点",
+      "page_shape": "dag-graph",
+      "fields": [
+        "节点编号",
+        "输入来源",
+        "输出目标",
+        "转换表达式",
+        "执行顺序",
+        "依赖节点",
+        "失败策略",
+        "节点状态"
+      ],
+      "statuses": [
+        "草稿",
+        "待校验",
+        "已启用",
+        "已停用"
+      ],
+      "actions": [
+        "提交校验",
+        "启用节点",
+        "停用节点"
+      ],
+      "action_targets": [
+        "待校验",
+        "已启用",
+        "已停用"
+      ],
+      "metrics": [
+        "节点总数",
+        "已启用节点",
+        "待校验节点"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "flow",
+      "name": "数据流转编排",
+      "entity": "流转管道",
+      "page_shape": "dag-graph",
+      "fields": [
+        "管道编号",
+        "管道名称",
+        "起始节点",
+        "终止节点",
+        "中间节点",
+        "流转条件",
+        "并行数量",
+        "管道状态"
+      ],
+      "statuses": [
+        "草稿",
+        "待校验",
+        "已启用",
+        "已停用"
+      ],
+      "actions": [
+        "提交校验",
+        "启用管道",
+        "停用管道"
+      ],
+      "action_targets": [
+        "待校验",
+        "已启用",
+        "已停用"
+      ],
+      "metrics": [
+        "管道总数",
+        "已启用管道",
+        "待校验管道"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "lineage",
+      "name": "数据血缘追踪",
+      "entity": "血缘关系",
+      "page_shape": "dag-graph",
+      "fields": [
+        "关系编号",
+        "上游节点",
+        "下游节点",
+        "来源字段",
+        "目标字段",
+        "转换说明",
+        "采集批次",
+        "关系版本"
+      ],
+      "statuses": [
+        "草稿",
+        "已记录",
+        "已验证",
+        "已归档"
+      ],
+      "actions": [
+        "记录关系",
+        "验证关系",
+        "归档关系"
+      ],
+      "action_targets": [
+        "已记录",
+        "已验证",
+        "已归档"
+      ],
+      "metrics": [
+        "关系总数",
+        "已验证关系",
+        "待验证关系"
+      ],
+      "_page_shape_explicit": true
+    },
+    {
+      "key": "report",
+      "name": "采集报告",
+      "entity": "采集报告",
+      "page_shape": "analysis-dashboard",
+      "fields": [
+        "报告编号",
+        "采集源",
+        "统计周期",
+        "总采集量",
+        "成功量",
+        "失败量",
+        "平均耗秒",
+        "生成时间"
+      ],
+      "statuses": [
+        "生成中",
+        "已生成",
+        "已发送"
+      ],
+      "actions": [
+        "重新生成"
+      ],
+      "action_targets": [
+        "已生成"
+      ],
+      "metrics": [
+        "本周采集量",
+        "成功率",
+        "平均延迟"
+      ],
+      "_page_shape_explicit": true
+    }
+  ]
+}
