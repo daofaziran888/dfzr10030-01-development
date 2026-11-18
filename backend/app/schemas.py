@@ -35,6 +35,25 @@ class ActionPayload(BaseModel):
     remark: str | None = None
 
 
+class ProfileBuildPayload(BaseModel):
+    """生成源端接入档案：expected_version 用于并发写入的乐观锁。"""
+
+    expected_version: int | None = None
+    conflict_policy: str | None = None
+
+
+class ConflictResolvePayload(BaseModel):
+    """冲突取舍：续期优先或地址优先。"""
+
+    policy: str
+
+
+class LedgerConfirmPayload(BaseModel):
+    """确认待确认台账记录，expected_version 用于拒绝后到的并发写入。"""
+
+    expected_version: int | None = None
+
+
 
 class DatasourceEntry(BaseModel):
     """数据源明细结构。"""

@@ -66,6 +66,7 @@ npm run dev
 | 数据流转编排 | `flow` | 流转管道 | 管道编号、管道名称、起始节点 |
 | 数据血缘追踪 | `lineage` | 血缘关系 | 关系编号、上游节点、下游节点 |
 | 采集报告 | `report` | 采集报告 | 报告编号、采集源、统计周期 |
+| 源端接入档案 | `access_profile`（服务层） | 接入档案 | 源端编号、凭据版本、接入地址、可用状态 |
 
 ## 约定
 
@@ -73,6 +74,41 @@ npm run dev
   `backend/app/routers/<模块>.py`，业务规则在 `backend/app/services/<模块>.py`。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+## 源端接入档案
+
+把「数据源配置的连接参数」「认证凭据」「最近校验结果」合并成每个源端唯一的一份
+可执行接入档案，规则集中在 `backend/app/services/access_profile.py`。
+
+- 合并口径：按源端编号解析连接字段，取该源端最近续期的可用凭据；`凭据版本`与
+  `接入地址` 始终来自同一份配置快照，档案里保留 `配置快照` 标识。
+- 阈值与规则：超时 1-300 秒、重试 0-10 次、每源端仅 1 份可执行档案、历史依据最多
+  保留 20 份；超出范围或上限的记录会在 `失败原因` / `口径说明` 里写明原因。
+- 可执行清单：校验未通过、凭据不可用或数据源未启用的源端不会进入清单，避免采集
+  任务继续向旧端点写入数据。
+- 冲突边界：续期回执与旧接入地址的失败校验结果同时落在同一源端时，按
+  `续期优先` 或 `地址优先` 取舍；两种口径都保持业务结果，旧依据保留在历史里。
+- 并发写入：生成档案与确认台账都带 `expected_version`，先到的一次生效，后到的
+  请求被拒绝并说明当前版本。
+
+| 接口 | 说明 |
+| --- | --- |
+| `GET /api/datasource/profiles/list` | 每个源端当前的接入档案 |
+| `GET /api/datasource/profiles/executable` | 可执行清单 |
+| `GET /api/datasource/{id}/profile` | 按源端编号/ID 解析出的接入档案 |
+| `GET /api/datasource/{id}/profile/history` | 历史依据（旧档案快照） |
+| `POST /api/datasource/{id}/profile` | 生成档案，支持 `expected_version`、`conflict_policy` |
+| `POST /api/datasource/{id}/profile/revalidate` | 重新校验并更新档案 |
+| `POST /api/datasource/{id}/profile/conflict` | 按 `续期优先`/`地址优先` 重算 |
+| `GET /api/auth/profiles/list` | 认证页只读读取接入档案 |
+| `GET /api/auth/ledger/list` | 接入档案落入的待确认台账 |
+| `POST /api/auth/ledger/{id}/confirm` | 确认入账并生成回读记录 |
+| `GET /api/auth/ledger/readback` | 可回读记录 |
+| `GET /api/auth/verify/results` | 认证服务返回给数据源配置的核对结果 |
+
+认证服务在 `续期凭证` / `吊销凭证` 时回写档案的凭据版本与可用性：续期会阻断旧凭据
+并登记续期回执，吊销会让该源端档案立即退出可执行清单。
+
 
 领域：数据工程
 子方向：数据采集、爬虫与RPA

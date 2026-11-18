@@ -7,7 +7,7 @@ import io
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
-from app.schemas import ActionPayload, ActionResult, EntryPayload, PageResult
+from app.schemas import ActionPayload, ActionResult, EntryPayload, LedgerConfirmPayload, PageResult
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/api/auth", tags=["凭证管理"])
@@ -72,6 +72,43 @@ def get_entry(entry_id: int) -> dict:
     if entry is None:
         raise HTTPException(status_code=404, detail=f"认证凭证 {entry_id} 不存在或已归档")
     return entry
+
+
+@router.get("/profiles/list")
+def list_profiles() -> dict[str, object]:
+    """认证页一并读取的源端接入档案：只读输入，不由凭证页改写。"""
+    items = service.profiles_for_auth()
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/ledger/list")
+def list_ledger() -> dict[str, object]:
+    """接入档案落入的待确认台账。"""
+    items = service.ledger()
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/ledger/readback")
+def list_readback() -> dict[str, object]:
+    """认证业务面围绕接入档案多出的可回读记录，最新在前。"""
+    items = service.readback_records()
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/ledger/{ledger_id}/confirm", response_model=ActionResult)
+def confirm_ledger(ledger_id: int, payload: LedgerConfirmPayload) -> ActionResult:
+    """确认台账记录并生成回读记录；后到的并发确认会被拒绝。"""
+    entry, message = service.confirm_ledger(ledger_id, payload.expected_version)
+    if entry is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=entry)
+
+
+@router.get("/verify/results")
+def verify_results() -> dict[str, object]:
+    """认证服务向数据源配置返回的核对结果。"""
+    items = service.verify_results()
+    return {"items": items, "total": len(items)}
 
 
 @router.post("", response_model=ActionResult)

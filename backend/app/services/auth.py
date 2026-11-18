@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.access_profile import access_profile_service
 from app.store import store
 
 MODULE = "auth"
@@ -14,6 +15,9 @@ NEGATIVE_ACTIONS = []
 
 
 class AuthService:
+    def __init__(self) -> None:
+        self.profiles = access_profile_service
+
     def list_entries(
         self,
         *,
@@ -44,6 +48,7 @@ class AuthService:
         rows = store.rows(MODULE)
         entry = {"id": max((int(row.get("id", 0)) for row in rows), default=0) + 1}
         entry.update({field: values.get(field) for field in LIST_FIELDS})
+        entry["凭据版本"] = str(values.get("凭据版本") or "v1")
         entry["status"] = STATUS_ORDER[0]
         entry["pending"] = True
         entry["abnormal"] = False
@@ -62,4 +67,37 @@ class AuthService:
         entry["status"] = target
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
-        return entry, f"认证凭证已{action}"
+        # 续期/吊销后把凭据版本与可用性回写到该源端的接入档案。
+        writeback = self.profiles.apply_credential_change(entry, action)
+        entry["档案回写"] = writeback
+        return entry, f"认证凭证已{action}；{writeback}"
+
+    def profiles_for_auth(self) -> list[dict[str, Any]]:
+        """认证页面一并读取源端接入档案，作为只读输入展示。"""
+        return self.profiles.list_profiles()
+
+    def ledger(self) -> list[dict[str, Any]]:
+        return self.profiles.ledger()
+
+    def readback_records(self) -> list[dict[str, Any]]:
+        return self.profiles.readback_records()
+
+    def confirm_ledger(self, ledger_id: int, expected_version: int | None = None):
+        return self.profiles.confirm_ledger(ledger_id, expected_version=expected_version)
+
+    def verify_results(self) -> list[dict[str, Any]]:
+        """向数据源配置返回的核对结果：只读接入档案，不改数据源本身。"""
+        return [
+            {
+                "源端编号": profile.get("源端编号"),
+                "凭证编号": profile.get("凭证编号"),
+                "凭据版本": profile.get("凭据版本"),
+                "可用状态": profile.get("可用状态"),
+                "校验结果": profile.get("校验结果"),
+                "核对结果": (
+                    "一致" if profile.get("是否可执行") else "需处理"
+                ),
+                "失败原因": profile.get("失败原因"),
+            }
+            for profile in self.profiles.list_profiles()
+        ]

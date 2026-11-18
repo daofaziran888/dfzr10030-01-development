@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.access_profile import access_profile_service
 from app.store import store
 
 MODULE = "datasource"
@@ -14,6 +15,10 @@ NEGATIVE_ACTIONS = ["停用配置"]
 
 
 class DatasourceService:
+    def __init__(self) -> None:
+        # 数据源页是接入档案的主入口：按源端编号解析连接与认证字段。
+        self.profiles = access_profile_service
+
     def list_entries(
         self,
         *,
@@ -62,4 +67,41 @@ class DatasourceService:
         entry["status"] = target
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
-        return entry, f"数据源已{action}"
+        # 状态变化会改变可用性，档案随之重算，但旧依据保留在历史里。
+        profile, _ = self.profiles.generate(entry_id, reason=f"数据源{action}")
+        message = f"数据源已{action}"
+        if profile is not None:
+            message += f"；接入档案{profile['可用状态']}"
+        return entry, message
+
+    def access_profiles(self) -> list[dict[str, Any]]:
+        """数据源页读取的接入档案：每个源端只暴露一份当前快照。"""
+        return self.profiles.list_profiles()
+
+    def access_profile(self, entry_id: int) -> dict[str, Any] | None:
+        return self.profiles.get_profile(entry_id)
+
+    def profile_history(self, entry_id: int) -> list[dict[str, Any]] | None:
+        return self.profiles.history(entry_id)
+
+    def build_profile(
+        self,
+        entry_id: int,
+        *,
+        expected_version: int | None = None,
+        conflict_policy: str | None = None,
+    ) -> tuple[dict[str, Any] | None, str]:
+        return self.profiles.generate(
+            entry_id, expected_version=expected_version, conflict_policy=conflict_policy
+        )
+
+    def revalidate(self, entry_id: int) -> tuple[dict[str, Any] | None, str]:
+        return self.profiles.revalidate(entry_id)
+
+    def resolve_conflict(
+        self, entry_id: int, policy: str
+    ) -> tuple[dict[str, Any] | None, str]:
+        return self.profiles.resolve_conflict(entry_id, policy)
+
+    def executable_profiles(self) -> list[dict[str, Any]]:
+        return self.profiles.executable_profiles()

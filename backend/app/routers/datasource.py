@@ -7,11 +7,17 @@ import io
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
-from app.schemas import ActionPayload, ActionResult, EntryPayload, PageResult
+from app.schemas import (
+    ActionPayload,
+    ActionResult,
+    ConflictResolvePayload,
+    EntryPayload,
+    PageResult,
+    ProfileBuildPayload,
+)
 from app.services.datasource import DatasourceService
 
 router = APIRouter(prefix="/api/datasource", tags=["数据源配置"])
-
 service = DatasourceService()
 
 LIST_FIELDS = ["源端编号", "连接类型", "接入地址", "认证方式", "采样周期", "超时秒数", "重试上限", "负责人"]
@@ -65,6 +71,20 @@ def export_entries(
         headers={"Content-Disposition": 'attachment; filename="datasource.csv"'})
 
 
+@router.get("/profiles/list")
+def list_profiles() -> dict[str, object]:
+    """读取每个源端当前唯一的一份接入档案（含不可执行的失败原因）。"""
+    items = service.access_profiles()
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/profiles/executable")
+def list_executable_profiles() -> dict[str, object]:
+    """可执行清单：校验未通过或凭据不可用的源端不会出现在这里。"""
+    items = service.executable_profiles()
+    return {"items": items, "total": len(items)}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条数据源明细；不存在时给出可读的错误说明。"""
@@ -72,6 +92,55 @@ def get_entry(entry_id: int) -> dict:
     if entry is None:
         raise HTTPException(status_code=404, detail=f"数据源 {entry_id} 不存在或已归档")
     return entry
+
+
+@router.get("/{entry_id}/profile")
+def get_profile(entry_id: int) -> dict:
+    """按源端编号解析连接与认证字段，返回该源端的接入档案。"""
+    profile = service.access_profile(entry_id)
+    if profile is None:
+        raise HTTPException(status_code=404, detail=f"数据源 {entry_id} 不存在或已归档")
+    return profile
+
+
+@router.get("/{entry_id}/profile/history")
+def get_profile_history(entry_id: int) -> dict[str, object]:
+    """历史依据：每次重算前的旧档案快照，最新在前。"""
+    history = service.profile_history(entry_id)
+    if history is None:
+        raise HTTPException(status_code=404, detail=f"数据源 {entry_id} 不存在或已归档")
+    return {"items": history, "total": len(history)}
+
+
+@router.post("/{entry_id}/profile", response_model=ActionResult)
+def build_profile(entry_id: int, payload: ProfileBuildPayload) -> ActionResult:
+    """生成源端接入档案；expected_version 不一致时拒绝后到的并发写入。"""
+    profile, message = service.build_profile(
+        entry_id,
+        expected_version=payload.expected_version,
+        conflict_policy=payload.conflict_policy,
+    )
+    if profile is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=profile)
+
+
+@router.post("/{entry_id}/profile/revalidate", response_model=ActionResult)
+def revalidate_profile(entry_id: int) -> ActionResult:
+    """重新校验并更新接入档案，可执行清单随之变化。"""
+    profile, message = service.revalidate(entry_id)
+    if profile is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=profile)
+
+
+@router.post("/{entry_id}/profile/conflict", response_model=ActionResult)
+def resolve_conflict(entry_id: int, payload: ConflictResolvePayload) -> ActionResult:
+    """在续期优先/地址优先两个边界里取舍，按冲突口径重算档案并保留旧依据。"""
+    profile, message = service.resolve_conflict(entry_id, payload.policy.strip())
+    if profile is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=profile)
 
 
 @router.post("", response_model=ActionResult)
